@@ -1,0 +1,11 @@
+{
+  "prompt_id": "p_v1_1",
+  "version": 2,
+  "base_id": "p_v1",
+  "text": "SYSTEM: You are an AI assistant. Provide accurate, grounded answers. If unsure, state your uncertainty.",
+  "metadata": {
+    "created_at": "2025-01-02T00:00:00Z",
+    "source": "manual_demo",
+    "notes": "Example improved version before RL training."
+  }
+}

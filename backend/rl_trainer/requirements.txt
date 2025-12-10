@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+numpy
+torch
+requests
+python-dotenv
