@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+/* ------- UI helpers (append to src/index.css) ------- */
+
+/* simple muted text utility */
+.text-muted { color: #6b7280; }
+
+/* small card helper if you want to use it */
+.card {
+  background: white;
+  border-radius: 0.5rem;
+  border: 1px solid #f3f4f6;
+  box-shadow: 0 1px 4px rgba(16,24,40,0.06);
+  padding: 1.25rem;
+}
+
+/* ensure pre blocks wrap */
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* disable default textarea outline on focus (we use tailwind ring) */
+textarea:focus { outline: none; }
+
+/* small responsiveness helpers (safe) */
+@media (min-width: 1024px) {
+  .lg\\:col-span-2 { grid-column: span 2 / span 2; }
+}
