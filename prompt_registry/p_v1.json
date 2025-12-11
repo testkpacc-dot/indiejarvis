@@ -1,0 +1,10 @@
+{
+  "prompt_id": "p_v1",
+  "version": 1,
+  "text": "SYSTEM: You are an AI assistant. Always answer accurately, avoid hallucinations, and explain reasoning when helpful.",
+  "metadata": {
+    "created_at": "2025-01-01T00:00:00Z",
+    "source": "manual_initialization",
+    "notes": "Base system prompt for all improvements."
+  }
+}
