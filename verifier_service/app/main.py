@@ -1,37 +1,19 @@
-# Main application entry point
-from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy.orm import Session
-from typing import List
+from fastapi import FastAPI
+from . import schemas, rules
 
-from .db import SessionLocal, engine, Base
-from .schemas import VerifyRequest, VerifyResponse
-
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="Verifier Service")
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+app = FastAPI(title="Verifier Service", version="1.0.0")
 
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {"ok": True, "service": "verifier"}
 
 
-@app.post("/api/v1/verify", response_model=VerifyResponse)
-def verify(req: VerifyRequest, db: Session = Depends(get_db)):
-    """
-    Verify a response for hallucinations, PII, and rule violations
-    """
-    # Placeholder implementation
-    return VerifyResponse(
-        is_valid=True,
-        issues=[],
-        message="Response passed verification"
+@app.post("/api/v1/verify", response_model=schemas.VerifierResult)
+def verify(payload: schemas.VerifyRequest):
+    result = rules.evaluate(
+        prompt_id=payload.prompt_id,
+        context=payload.context,
+        response=payload.response,
     )
+    return schemas.VerifierResult(**result)

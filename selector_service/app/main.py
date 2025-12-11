@@ -1,93 +1,107 @@
-# Main application entry point
+import random
+from datetime import datetime
+from typing import List
+
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
-from datetime import datetime
-import random
 
-from .db import SessionLocal, engine, Base
-from .models import BanditArm
-from .schemas import ChooseRequest, ChooseResponse, RewardRequest, ArmInfo
+from .db import get_db, init_db
+from . import models, schemas
 
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI(title="Bandit Selector Service")
-
-MIN_SAMPLES_LOW_RISK = 50
-MIN_SAMPLES_HIGH_RISK = 250
+app = FastAPI(title="Bandit Selector Service", version="1.0.0")
 
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
+@app.on_event("startup")
+def on_startup():
+    init_db()
+    # Seed some default arms if table is empty
+    db = next(get_db())
+    if db.query(models.BanditArm).count() == 0:
+        default_prompts = [
+            ("p_v1_1", "low"),
+            ("p_v1_2", "low"),
+            ("p_v1_3", "high"),
+        ]
+        for pid, risk in default_prompts:
+            db.add(
+                models.BanditArm(
+                    prompt_id=pid,
+                    alpha=1,
+                    beta=1,
+                    samples=0,
+                    risk=risk,
+                )
+            )
+        db.commit()
         db.close()
 
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    return {"ok": True, "service": "bandit"}
 
 
-@app.get("/api/v1/arms", response_model=List[ArmInfo])
-def list_arms(db: Session = Depends(get_db)):
-    arms = db.query(BanditArm).all()
-    return arms
-
-
-@app.post("/api/v1/choose", response_model=ChooseResponse)
-def choose_arm(req: ChooseRequest, db: Session = Depends(get_db)):
-    arms = db.query(BanditArm).all()
-    if not arms:
-        raise HTTPException(status_code=400, detail="No arms configured")
-
-    # Separate low-sampled arms by risk
-    low_sample_arms = []
-    for arm in arms:
-        min_samples = (
-            MIN_SAMPLES_HIGH_RISK if arm.risk == "high" else MIN_SAMPLES_LOW_RISK
-        )
-        if arm.samples < min_samples:
-            low_sample_arms.append(arm)
-
-    # If any arm is under min samples → explore among them
-    candidate_arms = low_sample_arms if low_sample_arms else arms
-
-    # Thompson Sampling with Beta(alpha, beta)
+def _sample_arm(arms: List[models.BanditArm]) -> models.BanditArm:
+    """Thompson sampling: pick arm with highest Beta(alpha, beta) sample."""
     best_arm = None
-    best_sample = -1.0
-    for arm in candidate_arms:
-        sample = random.betavariate(arm.alpha, arm.beta)
-        if sample > best_sample:
-            best_sample = sample
+    best_score = -1.0
+
+    for arm in arms:
+        score = random.betavariate(arm.alpha, arm.beta)
+        if score > best_score:
+            best_score = score
             best_arm = arm
 
-    if not best_arm:
-        raise HTTPException(status_code=500, detail="Failed to select arm")
+    return best_arm
 
-    return ChooseResponse(prompt_id=best_arm.prompt_id)
+
+@app.post("/api/v1/choose", response_model=schemas.ChooseResponse)
+def choose_arm(payload: schemas.ChooseRequest, db: Session = Depends(get_db)):
+    # Determine risk from context features (default = low)
+    risk = str(payload.context_features.get("risk", "low")).lower()
+
+    q = db.query(models.BanditArm)
+    if risk in ("low", "high"):
+        q = q.filter(models.BanditArm.risk == risk)
+
+    arms = q.all()
+    if not arms:
+        # fallback: any arm
+        arms = db.query(models.BanditArm).all()
+
+    if not arms:
+        raise HTTPException(status_code=500, detail="No bandit arms configured")
+
+    arm = _sample_arm(arms)
+    return schemas.ChooseResponse(prompt_id=arm.prompt_id)
 
 
 @app.post("/api/v1/reward")
-def update_reward(req: RewardRequest, db: Session = Depends(get_db)):
-    if req.reward not in (0, 1):
-        raise HTTPException(status_code=400, detail="Reward must be 0 or 1")
+def update_reward(payload: schemas.RewardRequest, db: Session = Depends(get_db)):
+    arm = db.query(models.BanditArm).filter(
+        models.BanditArm.prompt_id == payload.prompt_id
+    ).first()
 
-    arm = db.query(BanditArm).filter(BanditArm.prompt_id == req.prompt_id).first()
     if not arm:
-        raise HTTPException(status_code=404, detail="Prompt arm not found")
+        raise HTTPException(status_code=404, detail="Unknown prompt_id")
 
-    if req.reward == 1:
+    if payload.reward not in (0, 1):
+        raise HTTPException(status_code=400, detail="reward must be 0 or 1")
+
+    if payload.reward == 1:
         arm.alpha += 1
     else:
         arm.beta += 1
 
     arm.samples += 1
     arm.last_update = datetime.utcnow()
-
-    db.add(arm)
     db.commit()
     db.refresh(arm)
 
     return {"ok": True}
+
+
+@app.get("/api/v1/arms", response_model=schemas.ArmsListResponse)
+def list_arms(db: Session = Depends(get_db)):
+    arms = db.query(models.BanditArm).all()
+    return {"arms": arms}

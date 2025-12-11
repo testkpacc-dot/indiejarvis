@@ -1,1 +1,0 @@
-# Router for arms endpoint
