@@ -27,7 +27,7 @@ def run_clustering(failed_samples: List[Dict], n_clusters: int = 3):
     if len(texts) < 2:
         return []
 
-    vectorizer = TfididfVectorizer(stop_words="english")
+    vectorizer = TfidfVectorizer(stop_words="english")
     X = vectorizer.fit_transform(texts)
 
     kmeans = KMeans(n_clusters=min(n_clusters, len(texts)), random_state=42)
