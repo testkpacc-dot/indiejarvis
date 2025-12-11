@@ -2,13 +2,20 @@ import torch
 import torch.nn as nn
 
 class PolicyHead(nn.Module):
-    def __init__(self, input_dim=512, hidden=256):
+    """
+    A small feed-forward policy head used for GRPO-style optimization.
+    Input dimension = Azure embedding dimension.
+    Output = single scalar score predicting expected reward.
+    """
+
+    def __init__(self, in_dim, hidden=256):
         super().__init__()
-        self.model = nn.Sequential(
-            nn.Linear(input_dim, hidden),
+
+        self.net = nn.Sequential(
+            nn.Linear(in_dim, hidden),
             nn.ReLU(),
-            nn.Linear(hidden, input_dim)
+            nn.Linear(hidden, 1)  # Output is a single reward estimate
         )
 
     def forward(self, x):
-        return self.model(x)
+        return self.net(x)

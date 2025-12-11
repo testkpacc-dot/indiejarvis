@@ -1,7 +1,9 @@
 fastapi
-uvicorn[standard]
-scikit-learn
+uvicorn
+langchain-openai
+langchain
+httpx
 numpy
-pandas
-requests
+scikit-learn
 python-dotenv
+requests

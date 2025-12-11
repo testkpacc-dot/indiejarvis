@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from backend.failure_clustering.clustering import fetch_failed_experiences, run_clustering
+from .clustering import fetch_failed_experiences, run_clustering
 
 app = FastAPI()
 

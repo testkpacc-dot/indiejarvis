@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from grpo_trainer import train_one_step, write_new_prompt
+from .grpo_trainer import train_one_step, write_new_prompt   # FIXED relative import
 
 app = FastAPI()
 

@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from backend.patch_generator.generator import generate_patches
-
+from .generator import generate_patches   # FIXED import
 
 app = FastAPI()
 

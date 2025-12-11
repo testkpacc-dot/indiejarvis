@@ -1,6 +1,9 @@
 fastapi
-uvicorn[standard]
-numpy
+uvicorn
 torch
-requests
+langchain-openai
+langchain
+httpx
+numpy
 python-dotenv
+requests

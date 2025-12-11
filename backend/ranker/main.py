@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from ranker import rank_patches
+from .ranker import rank_patches   # FIXED relative import
 
 app = FastAPI()
 
